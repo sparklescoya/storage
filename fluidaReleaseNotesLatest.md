@@ -1,14 +1,14 @@
-## Fluida Release Notes
+# Fluida Release Notes
 
-### New Features
+## New Features
 - Added support for user-generated content
 - Improved AI behavior in dynamic environments
 
-### Bug Fixes
+## Bug Fixes
 - Fixed issue with loading times in large levels
 - Resolved audio desynchronization in cutscenes
 
-### Improvements
+## Improvements
 - Enhanced graphics settings for lower-end hardware
 - Optimized memory usage during gameplay
 
