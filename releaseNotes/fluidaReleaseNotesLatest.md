@@ -1,3 +1,4 @@
+[english]
 # Fluida Release Notes
 
 ## New Features
