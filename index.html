@@ -1,3 +1,331 @@
-Stores static files for things such as release notes
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vehicle Part Inspector</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f5f7f8;
+      --muted: #9ba5ad;
+      --faint: #6f7981;
+      --line: rgba(255,255,255,.11);
+      --line-strong: rgba(255,255,255,.18);
+      --panel: rgba(17,20,23,.94);
+      --raised: rgba(255,255,255,.055);
+      --raised-hover: rgba(255,255,255,.085);
+      --accent: #ffb951;
+      --accent-soft: rgba(255,185,81,.15);
+      --danger: #ff6961;
+      --radius: 14px;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
 
-<a href="https://coyalabs.com">Coya</a>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 32px;
+      overflow-x: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 50% 115%, rgba(230,151,50,.14), transparent 42%),
+        linear-gradient(145deg, #111619 0%, #090b0d 55%, #0d0f11 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .24;
+      background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, transparent, black 25%, black 75%, transparent);
+    }
+
+    button { font: inherit; }
+
+    .inspector {
+      width: min(1080px, 100%);
+      border: 1px solid var(--line-strong);
+      border-radius: 18px;
+      overflow: hidden;
+      background: var(--panel);
+      box-shadow: 0 24px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05);
+      backdrop-filter: blur(24px) saturate(120%);
+    }
+
+    .titlebar {
+      min-height: 82px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .part-icon {
+      width: 44px;
+      height: 44px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,185,81,.28);
+      border-radius: 11px;
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .part-icon svg { width: 25px; height: 25px; }
+    .identity { min-width: 0; }
+
+    .eyebrow {
+      margin: 0 0 3px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      overflow: hidden;
+      font-size: 20px;
+      font-weight: 650;
+      letter-spacing: -.015em;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: #bac2c8;
+      font-size: 12px;
+      font-weight: 550;
+      background: rgba(255,255,255,.035);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #65d17a;
+      box-shadow: 0 0 0 3px rgba(101,209,122,.12);
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr);
+    }
+
+    .section { padding: 26px 28px 30px; }
+    .section + .section { border-left: 1px solid var(--line); }
+
+    .section-heading {
+      min-height: 32px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    h2 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -.005em; }
+    .section-copy { margin: 4px 0 0; color: var(--faint); font-size: 12px; line-height: 1.4; }
+
+    .rows { display: grid; }
+
+    .property-row {
+      min-height: 60px;
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr);
+      align-items: center;
+      gap: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .property-row:first-child { border-top: 1px solid var(--line); }
+    .label { color: #b9c1c7; font-size: 13px; font-weight: 520; }
+    .value { justify-self: end; font-size: 14px; font-variant-numeric: tabular-nums; }
+
+    kbd {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 4px 10px;
+      border: 1px solid var(--line-strong);
+      border-bottom-color: rgba(255,255,255,.3);
+      border-radius: 8px;
+      color: #e8ebed;
+      background: linear-gradient(rgba(255,255,255,.09), rgba(255,255,255,.04));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 1px 2px rgba(0,0,0,.3);
+      font: 550 12px/1 var(--font, inherit);
+    }
+
+    .meter-cell { width: 100%; max-width: 270px; justify-self: end; }
+    .meter-label { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+    .meter-label strong { font-size: 14px; font-weight: 630; }
+    .meter-label span { color: var(--faint); font-size: 11px; }
+
+    .meter { height: 6px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.08); }
+    .meter > i { display: block; width: 59%; height: 100%; border-radius: inherit; background: var(--accent); box-shadow: 0 0 12px rgba(255,185,81,.3); }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .stat {
+      padding: 15px 16px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: rgba(255,255,255,.025);
+    }
+
+    .stat-label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+    .stat-value { font-size: 20px; font-weight: 590; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+    .stat-unit { margin-left: 3px; color: var(--muted); font-size: 12px; font-weight: 500; }
+
+    .icon-button {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      color: var(--ink);
+      cursor: pointer;
+      background: var(--raised);
+      transition: background .16s ease, border-color .16s ease, transform .16s ease;
+    }
+
+    .icon-button:hover { border-color: rgba(255,255,255,.3); background: var(--raised-hover); }
+    .icon-button:active { transform: scale(.95); }
+    .icon-button:focus-visible, .intrinsic:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .intrinsic-list { display: grid; gap: 8px; }
+
+    .intrinsic {
+      width: 100%;
+      min-height: 58px;
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      background: var(--raised);
+      transition: background .16s ease, border-color .16s ease;
+    }
+
+    .intrinsic:hover { border-color: var(--line-strong); background: var(--raised-hover); }
+    .trait-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; color: var(--accent); background: var(--accent-soft); }
+    .trait-icon svg { width: 18px; height: 18px; }
+    .trait-name { display: block; overflow: hidden; font-size: 13px; font-weight: 610; text-overflow: ellipsis; white-space: nowrap; }
+    .trait-effect { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .chevron { color: var(--faint); font-size: 18px; font-weight: 300; }
+
+    .capacity { margin: 18px 2px 0; color: var(--faint); font-size: 11px; text-align: right; }
+
+    @media (max-width: 760px) {
+      body { align-items: start; padding: 16px; }
+      .content { grid-template-columns: 1fr; }
+      .section + .section { border-top: 1px solid var(--line); border-left: 0; }
+      .section { padding: 22px 20px 24px; }
+    }
+
+    @media (max-width: 430px) {
+      .status { display: none; }
+      .property-row { grid-template-columns: 110px minmax(0, 1fr); }
+      .stats { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <main class="inspector" aria-labelledby="part-name">
+    <header class="titlebar">
+      <div class="part-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7.5 3.5h9l1 4 2 2.5v7.5a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V10l2-2.5 1-4Z"/><path d="M6.5 8h11M8 12.5h8M8 16h3"/></svg>
+      </div>
+      <div class="identity">
+        <p class="eyebrow">Fuel system · Tank</p>
+        <h1 id="part-name">Hypothetical 1×1</h1>
+      </div>
+      <div class="status"><span class="status-dot"></span>Installed</div>
+    </header>
+
+    <div class="content">
+      <section class="section" aria-labelledby="properties-heading">
+        <div class="section-heading">
+          <div><h2 id="properties-heading">Properties</h2><p class="section-copy">Configuration and live performance</p></div>
+        </div>
+
+        <div class="rows">
+          <div class="property-row">
+            <span class="label">Activation</span>
+            <span class="value"><kbd>Left Mouse</kbd></span>
+          </div>
+          <div class="property-row">
+            <span class="label">Fuel remaining</span>
+            <div class="meter-cell">
+              <div class="meter-label"><strong>59.23 L</strong><span>of 100 L</span></div>
+              <div class="meter" role="meter" aria-label="Fuel remaining" aria-valuemin="0" aria-valuemax="100" aria-valuenow="59.23"><i></i></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats" aria-label="Part statistics">
+          <div class="stat"><span class="stat-label">Active fuel drain</span><span class="stat-value">1.2<span class="stat-unit">L/min</span></span></div>
+          <div class="stat"><span class="stat-label">Mass</span><span class="stat-value">750<span class="stat-unit">kg</span></span></div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="intrinsics-heading">
+        <div class="section-heading">
+          <div><h2 id="intrinsics-heading">Intrinsics</h2><p class="section-copy">Traits native to this part</p></div>
+          <button class="icon-button" type="button" aria-label="Add intrinsic" title="Add intrinsic">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+          </button>
+        </div>
+
+        <div class="intrinsic-list">
+          <button class="intrinsic" type="button">
+            <span class="trait-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m13 2-7 11h6l-1 9 7-12h-6l1-8Z"/></svg></span>
+            <span><span class="trait-name">Quick ignition</span><span class="trait-effect">−18% startup delay</span></span><span class="chevron">›</span>
+          </button>
+          <button class="intrinsic" type="button">
+            <span class="trait-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="7"/></svg></span>
+            <span><span class="trait-name">Reinforced shell</span><span class="trait-effect">+12% impact resistance</span></span><span class="chevron">›</span>
+          </button>
+          <button class="intrinsic" type="button">
+            <span class="trait-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 15c2-5 5-8 9-9 3-.7 5 0 7-2-1 7-5 13-12 14"/><path d="M4 21c2-5 5-8 11-11"/></svg></span>
+            <span><span class="trait-name">Efficient feed</span><span class="trait-effect">−6% fuel consumption</span></span><span class="chevron">›</span>
+          </button>
+        </div>
+        <p class="capacity">3 of 5 intrinsic slots used</p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
